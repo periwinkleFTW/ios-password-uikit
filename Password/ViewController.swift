@@ -36,6 +36,7 @@ extension ViewController {
         stackView.layer.cornerRadius = 5
         
         confirmPasswordTextField.translatesAutoresizingMaskIntoConstraints = false
+        newPasswordTextField.delegate = self
         
         resetButton.translatesAutoresizingMaskIntoConstraints = false
         resetButton.configuration = .filled()
@@ -57,6 +58,15 @@ extension ViewController {
             view.trailingAnchor.constraint(equalToSystemSpacingAfter: stackView.trailingAnchor, multiplier: 2),
             stackView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
         ])
+    }
+}
+
+// MARK: PasswordTextFieldDelegate
+extension ViewController: PasswordTextFieldDelegate {
+    func editingChanged(_ sender: PasswordTextField) {
+        if sender == newPasswordTextField {
+            statusView.updateDisplay(sender.textField.text ?? "")
+        }
     }
 }
 
