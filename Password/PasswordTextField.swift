@@ -9,18 +9,33 @@ import UIKit
 
 protocol PasswordTextFieldDelegate: AnyObject {
     func editingChanged(_ sender: PasswordTextField)
+    func editingDidEnd(_ sender: PasswordTextField)
 }
 
 class PasswordTextField: UIView {
     
+    /**
+     A function one passes in to do custom validation on the text field.
+     
+     - Parameter: textValue: The value of text to validate
+     - Returns: A bool indicating whether the tex is valid, and if not a String containing an error message
+     **/
+    typealias CustomValidation = (_ textValue: String?) -> (Bool, String)?
+    
     let lockImageView = UIImageView(image: UIImage(systemName: "lock.fill"))
     let textField = UITextField()
-    let placeHolderText: String
     let eyeButton = UIButton(type: .custom)
     let dividerView = UIView()
-    let errorMessageLabel = UILabel()
+    let errorLabel = UILabel()
     
+    let placeHolderText: String
+    var customValidation: CustomValidation?
     weak var delegate: PasswordTextFieldDelegate?
+    
+    var text: String? {
+        get { return textField.text }
+        set { textField.text = newValue }
+    }
     
     init(placeHolderText: String) {
         self.placeHolderText = placeHolderText
@@ -66,13 +81,13 @@ extension PasswordTextField {
         dividerView.translatesAutoresizingMaskIntoConstraints = false
         dividerView.backgroundColor = .separator
         
-        errorMessageLabel.translatesAutoresizingMaskIntoConstraints = false
-        errorMessageLabel.textColor = .systemRed
-        errorMessageLabel.font = .preferredFont(forTextStyle: .footnote)
-        errorMessageLabel.text = "Password must meet requirements below."
-        errorMessageLabel.isHidden = true
-        errorMessageLabel.numberOfLines = 0
-        errorMessageLabel.lineBreakMode = .byWordWrapping
+        errorLabel.translatesAutoresizingMaskIntoConstraints = false
+        errorLabel.textColor = .systemRed
+        errorLabel.font = .preferredFont(forTextStyle: .footnote)
+        errorLabel.text = "Password must meet requirements below."
+        errorLabel.isHidden = true
+        errorLabel.numberOfLines = 0
+        errorLabel.lineBreakMode = .byWordWrapping
     }
     
     func layout() {
@@ -80,7 +95,7 @@ extension PasswordTextField {
         addSubview(textField)
         addSubview(eyeButton)
         addSubview(dividerView)
-        addSubview(errorMessageLabel)
+        addSubview(errorLabel)
         
         // lock
         NSLayoutConstraint.activate([
@@ -111,9 +126,9 @@ extension PasswordTextField {
         
         //error message label
         NSLayoutConstraint.activate([
-            errorMessageLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
-            errorMessageLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
-            errorMessageLabel.topAnchor.constraint(equalTo: dividerView.bottomAnchor, constant: 4)
+            errorLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
+            errorLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
+            errorLabel.topAnchor.constraint(equalTo: dividerView.bottomAnchor, constant: 4)
         ])
         
         // CHCR
@@ -137,5 +152,39 @@ extension PasswordTextField {
 
 // MARK: - UITextFieldDelegate
 extension PasswordTextField: UITextFieldDelegate {
+    func textFieldDidEndEditing(_ textField: UITextField) {
+        delegate?.editingDidEnd(self)
+    }
     
+    // Called when 'return' key is pressed. Necessary for dismissing keyboard
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.endEditing(true) // resign first responder
+        return true
+    }
+}
+
+// typealias CustomValidation = (_ textValue: String?) -> (Bool, String)?
+
+// MARK: - Validation
+extension PasswordTextField {
+    func validate() -> Bool {
+        if let customValidation = customValidation,
+           let customValidationResult = customValidation(text),
+           customValidationResult.0 == false {
+            showError(customValidationResult.1)
+            return false
+        }
+        clearError()
+        return true
+    }
+    
+    private func showError(_ errorMessage: String) {
+        errorLabel.isHidden = false
+        errorLabel.text = errorMessage
+    }
+    
+    private func clearError() {
+        errorLabel.isHidden = true
+        errorLabel.text = ""
+    }
 }
